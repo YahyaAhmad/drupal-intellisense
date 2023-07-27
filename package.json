@@ -2,7 +2,7 @@
   "name": "drupal-intellisense",
   "displayName": "Drupal Intellisense",
   "description": "Provides intellisense capibilities to vscode related to Druapl's APIs and services container",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "publisher": "YahyaAhmad",
   "repository": {
     "url": "https://sprintive@dev.azure.com/sprintive/Drupal%20Intellisense/_git/Drupal%20Intellisense"
