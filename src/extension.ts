@@ -72,7 +72,7 @@ export function activate(context: vscode.ExtensionContext) {
 
                 const services: vscode.CompletionItem[] = [];
                 const cacheContexts: vscode.CompletionItem[] = [];
-                f.forEach((uri) => {
+                f.forEach((uri) => {    
                   const doc: ServicesFile = yaml.load(
                     fs.readFileSync(uri.path, "utf-8")
                   ) as ServicesFile;
@@ -80,8 +80,8 @@ export function activate(context: vscode.ExtensionContext) {
                     Object.keys(doc.services).forEach((serviceId) => {
                       let hasCacheContext = false;
                       // If it is a cache context, save it in another variable.
-                      if (doc.services[serviceId].tags) {
-                        const hasCacheContext = doc.services[
+                      if (doc.services[serviceId]?.tags) {
+                        hasCacheContext = !!doc.services[
                           serviceId
                         ].tags.find((tag) => {
                           return tag.name && tag.name == "cache.context";
