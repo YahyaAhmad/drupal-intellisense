@@ -2,7 +2,7 @@
   "name": "drupal-intellisense",
   "displayName": "Drupal Intellisense",
   "description": "Provides intellisense capibilities to vscode related to Druapl's APIs and services container",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "publisher": "YahyaAhmad",
   "repository": {
     "url": "https://sprintive@dev.azure.com/sprintive/Drupal%20Intellisense/_git/Drupal%20Intellisense"
@@ -23,10 +23,6 @@
       {
         "title": "Drupal Intellisnse: Scan Workspace",
         "command": "drupal.intellisense.scan"
-      },
-      {
-        "title": "Drupal Intellisnse: Enter Drupal Service",
-        "command": "drupal.intellisense.service"
       }
     ]
   },
