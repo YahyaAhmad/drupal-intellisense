@@ -11,3 +11,7 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 ## 1.0.1
 
 - Fixed a fatal typeerror bug.
+
+## 1.1.0
+
+- Upgrade on the autocompletion function, it should be more useful now.

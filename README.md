@@ -3,6 +3,9 @@
 This extension will provide some intellisense capibilities to your vscode.
 Currently, it only provides autocompletion for \Drupal::service and the Drupal contianer in general.
 
+The image below shows the autocompletion in action.
+
+![Autocompletion](https://raw.githubusercontent.com/rafaelcalleja/drupal-intellisense/master/images/autocompletion.gif)
 
 ## Installation
 

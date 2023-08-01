@@ -46,80 +46,113 @@ export function activate(context: vscode.ExtensionContext) {
   // 		];
   // 	}
   // });
-  context.subscriptions.push(
-    vscode.commands.registerCommand("drupal.intellisense.scan", () => {
-      vscode.window.withProgress(
-        {
-          location: vscode.ProgressLocation.Notification,
-          title: "Drupal Intellisense Scanning",
-          cancellable: true,
-        },
-        (progress, token) => {
-          token.onCancellationRequested(() => {
-            console.log("User canceled the long running operation");
-          });
-          progress.report({
-            increment: 0,
-            message: "Scanning for services.yml...",
-          });
+  // Register snippet completion provider
 
-          const promise = new Promise<void>((resolve) => {
-            // Services
-            vscode.workspace
-              .findFiles("**/*.services.yml", "{**/node_modules,**/vendor}")
-              .then((f) => {
-                progress.report({ increment: 50, message: "Parsing..." });
+  vscode.commands.registerCommand("drupal.intellisense.scan", () => {
+    vscode.window.withProgress(
+      {
+        location: vscode.ProgressLocation.Notification,
+        title: "Drupal Intellisense Scanning",
+        cancellable: true,
+      },
+      (progress, token) => {
+        token.onCancellationRequested(() => {
+          console.log("User canceled the long running operation");
+        });
+        progress.report({
+          increment: 0,
+          message: "Scanning for services.yml...",
+        });
 
-                const services: vscode.CompletionItem[] = [];
-                const cacheContexts: vscode.CompletionItem[] = [];
-                f.forEach((uri) => {    
-                  const doc: ServicesFile = yaml.load(
-                    fs.readFileSync(uri.path, "utf-8")
-                  ) as ServicesFile;
-                  if (doc.services) {
-                    Object.keys(doc.services).forEach((serviceId) => {
-                      let hasCacheContext = false;
-                      // If it is a cache context, save it in another variable.
-                      if (doc.services[serviceId]?.tags) {
-                        hasCacheContext = !!doc.services[
-                          serviceId
-                        ].tags.find((tag) => {
+        const promise = new Promise<void>((resolve) => {
+          // Services
+          vscode.workspace
+            .findFiles("**/*.services.yml", "{**/node_modules,**/vendor}")
+            .then((f) => {
+              progress.report({ increment: 50, message: "Parsing..." });
+
+              const services: vscode.CompletionItem[] = [];
+              const servicesWithClasses: vscode.CompletionItem[] = [];
+              const cacheContexts: vscode.CompletionItem[] = [];
+              f.forEach((uri) => {
+                const doc: ServicesFile = yaml.load(
+                  fs.readFileSync(uri.path, "utf-8")
+                ) as ServicesFile;
+                if (doc.services) {
+                  Object.keys(doc.services).forEach((serviceId) => {
+                    let hasCacheContext = false;
+                    // If it is a cache context, save it in another variable.
+                    const className = doc.services[serviceId]?.class;
+
+                    if (!className) {
+                      return;
+                    }
+
+                    if (doc.services[serviceId]?.tags) {
+                      hasCacheContext = !!doc.services[serviceId].tags.find(
+                        (tag) => {
                           return tag.name && tag.name == "cache.context";
-                        });
-                      }
+                        }
+                      );
+                    }
 
-                      if (hasCacheContext) {
-                        cacheContexts.push(
-                          new vscode.CompletionItem(
-                            serviceId,
-                            vscode.CompletionItemKind.Keyword
-                          )
+                    if (hasCacheContext) {
+                      cacheContexts.push(
+                        new vscode.CompletionItem(
+                          serviceId,
+                          vscode.CompletionItemKind.Keyword
+                        )
+                      );
+                    } else {
+                      services.push(
+                        new vscode.CompletionItem(
+                          serviceId,
+                          vscode.CompletionItemKind.Keyword
+                        )
+                      );
+
+                      const fullServiceCompletion = new vscode.CompletionItem(
+                        {
+                          label: serviceId,
+                          detail: " " + className,
+                        },
+                        vscode.CompletionItemKind.Snippet
+                      );
+
+                      fullServiceCompletion.filterText =
+                        '\\Drupal::service("' +
+                        serviceId +
+                        " \\Drupal::service('" +
+                        serviceId;
+                      // Replace dots with underscores.
+                      const variableName = serviceId.replace(/\./g, "_");
+
+                      fullServiceCompletion.insertText =
+                        new vscode.SnippetString(
+                          `/** @var \\${className} $\${1:${variableName}} */\n$\${1:${variableName}} = \\Drupal::service("${serviceId}");\n`
                         );
-                      } else {
-                        services.push(
-                          new vscode.CompletionItem(
-                            serviceId,
-                            vscode.CompletionItemKind.Keyword
-                          )
-                        );
-                      }
-                    });
-                  }
-                });
-                context.workspaceState.update(
-                  "drupal.intellisense.services",
-                  services
-                );
-                progress.report({ increment: 50 });
-                resolve();
+                      servicesWithClasses.push(fullServiceCompletion);
+                    }
+                  });
+                }
               });
-          });
+              context.workspaceState.update(
+                "drupal.intellisense.services",
+                services
+              );
+              context.workspaceState.update(
+                "drupal.intellisense.servicesWithDefinitions",
+                servicesWithClasses
+              );
+              progress.report({ increment: 50 });
+              resolve();
+            });
+        });
 
-          return promise;
-        }
-      );
-    })
-  );
+        return promise;
+      }
+    );
+  });
 
   // Execute scanning on activation
   vscode.commands.executeCommand("drupal.intellisense.scan");
@@ -131,12 +164,7 @@ export function activate(context: vscode.ExtensionContext) {
         document: vscode.TextDocument,
         position: vscode.Position
       ) {
-        const servicesEndsWith = [
-          '::service("',
-          "::service('",
-          '$container->get("',
-          "$container->get('",
-        ];
+        const servicesEndsWith = ['$container->get("', "$container->get('"];
 
         // TODO: Cache contexts snippets.
 
@@ -160,5 +188,60 @@ export function activate(context: vscode.ExtensionContext) {
     "'"
   );
 
+  const servicesWithDefinition =
+    vscode.languages.registerCompletionItemProvider(
+      "php",
+      {
+        provideCompletionItems(
+          document: vscode.TextDocument,
+          position: vscode.Position
+        ) {
+          const servicesEndsWith = ['::service("', "::service('"];
+
+          const linePrefix = document
+            .lineAt(position)
+            .text.substr(0, position.character);
+          const linePrefixBefore = document
+            .lineAt(position)
+            .text.substr(0, position.character - 1);
+          const autoCompleteService = servicesEndsWith.some((str) => {
+            // If it ends with str or the line is whitespace.
+            if (
+              linePrefix.endsWith(str) ||
+              linePrefixBefore == "" ||
+              !/\S/.test(linePrefixBefore)
+            ) {
+              return true;
+            }
+          });
+
+          if (autoCompleteService) {
+            const items = context.workspaceState.get(
+              "drupal.intellisense.servicesWithDefinitions"
+            ) as vscode.CompletionItem[];
+
+            // Repalce the current line with the new snippet.
+            const currentLine = document.lineAt(position.line);
+            const range = new vscode.Range(
+              new vscode.Position(
+                position.line,
+                currentLine.firstNonWhitespaceCharacterIndex
+              ),
+              new vscode.Position(position.line, currentLine.text.length)
+            );
+
+            items.forEach((item) => {
+              item.range = range;
+            });
+
+            return items;
+          }
+        },
+      },
+      '"',
+      "'"
+    );
+
   context.subscriptions.push(servicesProvider);
+  context.subscriptions.push(servicesWithDefinition);
 }

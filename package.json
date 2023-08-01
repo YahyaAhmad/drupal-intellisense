@@ -23,6 +23,10 @@
       {
         "title": "Drupal Intellisnse: Scan Workspace",
         "command": "drupal.intellisense.scan"
+      },
+      {
+        "title": "Drupal Intellisnse: Enter Drupal Service",
+        "command": "drupal.intellisense.service"
       }
     ]
   },
